@@ -91,6 +91,9 @@ Expected response:
 Notes:
 - `wakeUpDate` must be today's date
 - valid `morningFeeling` values are `BAD`, `OK`, and `GOOD`
+- `POST /api/v1/sleep-logs` behaves as an upsert for `userId + wakeUpDate`
+- the first request for a given user and date returns `201 Created`
+- posting the same user and date again updates that night’s log and returns `200 OK`
 
 ### 2. Fetch the latest sleep log
 

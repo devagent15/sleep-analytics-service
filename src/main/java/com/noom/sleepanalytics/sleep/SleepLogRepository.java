@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SleepLogRepository extends JpaRepository<SleepLogEntity, Long> {
 
-    Optional<SleepLogEntity> findFirstByUserIdOrderByWakeUpDateDesc(String userId);
+    Optional<SleepLogEntity> findFirstByUserIdOrderByWakeUpDateDescUpdatedAtDescIdDesc(String userId);
+
+    Optional<SleepLogEntity> findByUserIdAndWakeUpDate(String userId, LocalDate wakeUpDate);
 
     List<SleepLogEntity> findAllByUserIdAndWakeUpDateBetweenOrderByWakeUpDateAsc(
         String userId,

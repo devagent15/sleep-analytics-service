@@ -5,6 +5,7 @@ import com.noom.sleepanalytics.sleep.analytics.SleepAnalyticsCalculator;
 import com.noom.sleepanalytics.sleep.dto.CreateSleepLogRequest;
 import com.noom.sleepanalytics.sleep.dto.SleepAnalyticsResponse;
 import com.noom.sleepanalytics.sleep.dto.SleepLogResponse;
+import com.noom.sleepanalytics.sleep.dto.SleepLogUpsertResult;
 import com.noom.sleepanalytics.sleep.dto.TimeWindowDto;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -32,10 +33,13 @@ public class SleepLogService {
         this.clock = clock;
     }
 
-    public SleepLogResponse createSleepLog(CreateSleepLogRequest request) {
+    public SleepLogUpsertResult createSleepLog(CreateSleepLogRequest request) {
         validateWakeUpDate(request.wakeUpDate());
 
-        SleepLogEntity sleepLogEntity = new SleepLogEntity();
+        SleepLogEntity sleepLogEntity = sleepLogRepository.findByUserIdAndWakeUpDate(request.userId(), request.wakeUpDate())
+            .orElseGet(SleepLogEntity::new);
+        boolean created = sleepLogEntity.getId() == null;
+
         sleepLogEntity.setUserId(request.userId());
         sleepLogEntity.setWakeUpDate(request.wakeUpDate());
         sleepLogEntity.setBedtime(request.bedtime());
@@ -45,16 +49,17 @@ public class SleepLogService {
 
         SleepLogResponse response = toResponse(sleepLogRepository.save(sleepLogEntity));
         log.info(
-            "Created sleep log id={} for userId={} wakeUpDate={}",
+            "{} sleep log id={} for userId={} wakeUpDate={}",
+            created ? "Created" : "Updated",
             response.id(),
             response.userId(),
             response.wakeUpDate()
         );
-        return response;
+        return new SleepLogUpsertResult(response, created);
     }
 
     public SleepLogResponse getLatestSleepLog(String userId) {
-        SleepLogResponse response = sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDesc(userId)
+        SleepLogResponse response = sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDescUpdatedAtDescIdDesc(userId)
             .map(this::toResponse)
             .orElseThrow(() -> new NotFoundException("No sleep logs found for userId=" + userId));
         log.info(

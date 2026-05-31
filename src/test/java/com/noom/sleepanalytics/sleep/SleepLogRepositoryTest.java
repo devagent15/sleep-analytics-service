@@ -25,10 +25,20 @@ class SleepLogRepositoryTest {
         sleepLogRepository.save(sleepLog("user_123", LocalDate.of(2026, 5, 20), "22:30:00", "06:30:00", true));
         sleepLogRepository.save(sleepLog("user_123", LocalDate.of(2026, 5, 24), "23:30:00", "07:30:00", true));
 
-        Optional<SleepLogEntity> latest = sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDesc("user_123");
+        Optional<SleepLogEntity> latest = sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDescUpdatedAtDescIdDesc("user_123");
 
         assertTrue(latest.isPresent());
         assertEquals(LocalDate.of(2026, 5, 24), latest.get().getWakeUpDate());
+    }
+
+    @Test
+    void shouldFindSleepLogByUserIdAndWakeUpDate() {
+        sleepLogRepository.save(sleepLog("user_123", LocalDate.of(2026, 5, 24), "23:30:00", "07:30:00", true));
+
+        Optional<SleepLogEntity> sleepLog = sleepLogRepository.findByUserIdAndWakeUpDate("user_123", LocalDate.of(2026, 5, 24));
+
+        assertTrue(sleepLog.isPresent());
+        assertEquals(LocalDate.of(2026, 5, 24), sleepLog.get().getWakeUpDate());
     }
 
     @Test

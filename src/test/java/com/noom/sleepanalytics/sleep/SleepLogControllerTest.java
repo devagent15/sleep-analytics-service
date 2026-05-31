@@ -12,6 +12,7 @@ import com.noom.sleepanalytics.common.exception.NotFoundException;
 import com.noom.sleepanalytics.sleep.dto.CreateSleepLogRequest;
 import com.noom.sleepanalytics.sleep.dto.SleepAnalyticsResponse;
 import com.noom.sleepanalytics.sleep.dto.SleepLogResponse;
+import com.noom.sleepanalytics.sleep.dto.SleepLogUpsertResult;
 import com.noom.sleepanalytics.sleep.dto.TimeWindowDto;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -56,7 +57,7 @@ class SleepLogControllerTest {
             LocalTime.parse("08:30:00"),
             true,
             MorningFeeling.GOOD
-        )))).thenReturn(response);
+        )))).thenReturn(new SleepLogUpsertResult(response, true));
 
         mockMvc.perform(post("/api/v1/sleep-logs")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -75,6 +76,45 @@ class SleepLogControllerTest {
             .andExpect(jsonPath("$.userId").value("user_123"))
             .andExpect(jsonPath("$.morningFeeling").value("GOOD"))
             .andExpect(jsonPath("$.totalTimeInBed").value("10:00:00"));
+    }
+
+    @Test
+    void shouldUpdateSleepLogForSameUserAndWakeUpDate() throws Exception {
+        SleepLogResponse response = new SleepLogResponse(
+            60L,
+            "user_123",
+            LocalDate.of(2026, 5, 30),
+            LocalTime.parse("19:30:00"),
+            LocalTime.parse("04:30:00"),
+            true,
+            MorningFeeling.GOOD,
+            "09:00:00",
+            Instant.parse("2026-05-31T21:22:25Z")
+        );
+        when(sleepLogService.createSleepLog(eq(new CreateSleepLogRequest(
+            "user_123",
+            LocalDate.of(2026, 5, 30),
+            LocalTime.parse("19:30:00"),
+            LocalTime.parse("04:30:00"),
+            true,
+            MorningFeeling.GOOD
+        )))).thenReturn(new SleepLogUpsertResult(response, false));
+
+        mockMvc.perform(post("/api/v1/sleep-logs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "userId": "user_123",
+                      "wakeUpDate": "2026-05-30",
+                      "bedtime": "19:30:00",
+                      "wakeTime": "04:30:00",
+                      "isBedtimeBeforeMidnight": true,
+                      "morningFeeling": "GOOD"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(60))
+            .andExpect(jsonPath("$.totalTimeInBed").value("09:00:00"));
     }
 
     @Test

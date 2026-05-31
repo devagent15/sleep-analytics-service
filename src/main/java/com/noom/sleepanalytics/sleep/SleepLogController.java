@@ -3,16 +3,17 @@ package com.noom.sleepanalytics.sleep;
 import com.noom.sleepanalytics.sleep.dto.CreateSleepLogRequest;
 import com.noom.sleepanalytics.sleep.dto.SleepAnalyticsResponse;
 import com.noom.sleepanalytics.sleep.dto.SleepLogResponse;
+import com.noom.sleepanalytics.sleep.dto.SleepLogUpsertResult;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -28,14 +29,15 @@ public class SleepLogController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public SleepLogResponse createSleepLog(@Valid @RequestBody CreateSleepLogRequest request) {
+    public ResponseEntity<SleepLogResponse> createSleepLog(@Valid @RequestBody CreateSleepLogRequest request) {
         log.info(
             "Received create sleep log request for userId={} wakeUpDate={}",
             request.userId(),
             request.wakeUpDate()
         );
-        return sleepLogService.createSleepLog(request);
+        SleepLogUpsertResult result = sleepLogService.createSleepLog(request);
+        HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
+        return ResponseEntity.status(status).body(result.sleepLog());
     }
 
     @GetMapping("/latest")

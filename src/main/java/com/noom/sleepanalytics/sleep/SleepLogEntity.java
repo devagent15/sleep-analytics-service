@@ -10,12 +10,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "sleep_logs")
+@Table(
+    name = "sleep_logs",
+    uniqueConstraints = @UniqueConstraint(name = "uk_sleep_logs_user_id_wake_up_date", columnNames = {"user_id", "wake_up_date"})
+)
 public class SleepLogEntity {
 
     @Id

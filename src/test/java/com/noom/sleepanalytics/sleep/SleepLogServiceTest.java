@@ -11,6 +11,7 @@ import com.noom.sleepanalytics.sleep.analytics.SleepAnalyticsCalculator;
 import com.noom.sleepanalytics.sleep.dto.CreateSleepLogRequest;
 import com.noom.sleepanalytics.sleep.dto.SleepAnalyticsResponse;
 import com.noom.sleepanalytics.sleep.dto.SleepLogResponse;
+import com.noom.sleepanalytics.sleep.dto.SleepLogUpsertResult;
 import com.noom.sleepanalytics.sleep.dto.TimeWindowDto;
 import java.time.Clock;
 import java.time.Instant;
@@ -66,9 +67,11 @@ class SleepLogServiceTest {
         savedEntity.setMorningFeeling(MorningFeeling.GOOD);
         savedEntity.setCreatedAt(Instant.parse("2026-05-30T13:15:00Z"));
 
+        when(sleepLogRepository.findByUserIdAndWakeUpDate("user_123", LocalDate.of(2026, 5, 30))).thenReturn(Optional.empty());
         when(sleepLogRepository.save(any(SleepLogEntity.class))).thenReturn(savedEntity);
 
-        SleepLogResponse response = sleepLogService.createSleepLog(request);
+        SleepLogUpsertResult result = sleepLogService.createSleepLog(request);
+        SleepLogResponse response = result.sleepLog();
 
         ArgumentCaptor<SleepLogEntity> captor = ArgumentCaptor.forClass(SleepLogEntity.class);
         verify(sleepLogRepository).save(captor.capture());
@@ -77,6 +80,37 @@ class SleepLogServiceTest {
         assertEquals(1L, response.id());
         assertEquals("user_123", response.userId());
         assertEquals("10:00:00", response.totalTimeInBed());
+        assertEquals(true, result.created());
+    }
+
+    @Test
+    void shouldUpdateExistingSleepLogForSameUserAndWakeUpDate() {
+        CreateSleepLogRequest request = new CreateSleepLogRequest(
+            "user_123",
+            LocalDate.of(2026, 5, 30),
+            LocalTime.parse("19:30:00"),
+            LocalTime.parse("04:30:00"),
+            true,
+            MorningFeeling.GOOD
+        );
+
+        SleepLogEntity existingEntity = new SleepLogEntity();
+        existingEntity.setId(60L);
+        existingEntity.setUserId("user_123");
+        existingEntity.setWakeUpDate(LocalDate.of(2026, 5, 30));
+        existingEntity.setBedtime(LocalTime.parse("23:00:00"));
+        existingEntity.setWakeTime(LocalTime.parse("07:45:00"));
+        existingEntity.setBedtimeBeforeMidnight(true);
+        existingEntity.setMorningFeeling(MorningFeeling.GOOD);
+        existingEntity.setCreatedAt(Instant.parse("2026-05-30T13:15:00Z"));
+
+        when(sleepLogRepository.findByUserIdAndWakeUpDate("user_123", LocalDate.of(2026, 5, 30))).thenReturn(Optional.of(existingEntity));
+        when(sleepLogRepository.save(any(SleepLogEntity.class))).thenReturn(existingEntity);
+
+        SleepLogUpsertResult result = sleepLogService.createSleepLog(request);
+
+        assertEquals(false, result.created());
+        verify(sleepLogRepository).save(existingEntity);
     }
 
     @Test
@@ -110,7 +144,7 @@ class SleepLogServiceTest {
         savedEntity.setMorningFeeling(MorningFeeling.OK);
         savedEntity.setCreatedAt(Instant.parse("2026-05-30T13:15:00Z"));
 
-        when(sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDesc("user_123")).thenReturn(Optional.of(savedEntity));
+        when(sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDescUpdatedAtDescIdDesc("user_123")).thenReturn(Optional.of(savedEntity));
 
         SleepLogResponse response = sleepLogService.getLatestSleepLog("user_123");
 
@@ -122,7 +156,7 @@ class SleepLogServiceTest {
 
     @Test
     void shouldThrowWhenLatestSleepLogDoesNotExist() {
-        when(sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDesc("user_123")).thenReturn(Optional.empty());
+        when(sleepLogRepository.findFirstByUserIdOrderByWakeUpDateDescUpdatedAtDescIdDesc("user_123")).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class, () -> sleepLogService.getLatestSleepLog("user_123"));
     }
