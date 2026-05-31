@@ -141,30 +141,6 @@ Expected behavior:
   - a valid `range`
   - zero counts for `BAD`, `OK`, and `GOOD`
 
-## Loading Sample Data
-
-To make manual testing easier, the repository includes a small seed helper that inserts 30 days of randomized sleep logs for a given user.
-
-Seed one user:
-
-```bash
-./scripts/seed_sleep_logs.sh user_123
-```
-
-Seed another user:
-
-```bash
-./scripts/seed_sleep_logs.sh user_567
-```
-
-The seed data varies:
-- bedtime
-- wake time
-- `isBedtimeBeforeMidnight`
-- `morningFeeling`
-
-That makes the analytics response easier to inspect than a flat set of identical rows.
-
 ## Calculation Logic
 
 The part of the assignment that needed the most care was averaging bedtime correctly.
