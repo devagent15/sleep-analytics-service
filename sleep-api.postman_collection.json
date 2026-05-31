@@ -1,0 +1,90 @@
+{
+  "info": {
+    "name": "Sleep Analytics API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Sleep Log",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sleep-logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "sleep-logs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"user_123\",\n  \"wakeUpDate\": \"2026-05-24\",\n  \"bedtime\": \"22:30:00\",\n  \"wakeTime\": \"08:30:00\",\n  \"isBedtimeBeforeMidnight\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Get Latest Sleep Log",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sleep-logs/latest?userId=user_123",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "sleep-logs",
+            "latest"
+          ],
+          "query": [
+            {
+              "key": "userId",
+              "value": "user_123"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get 30-Day Analytics",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sleep-logs/analytics/averages?userId=user_123",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "sleep-logs",
+            "analytics",
+            "averages"
+          ],
+          "query": [
+            {
+              "key": "userId",
+              "value": "user_123"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ]
+}

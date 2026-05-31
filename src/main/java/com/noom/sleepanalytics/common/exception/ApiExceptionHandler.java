@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -48,6 +49,13 @@ public class ApiExceptionHandler {
         String message = exception.getMethod() + " is not supported for this endpoint";
         log.warn("Method not supported: {}", message);
         return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, message);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleResourceNotFound(NoResourceFoundException exception) {
+        String message = "Resource not found: " + exception.getResourcePath();
+        log.warn(message);
+        return buildErrorResponse(HttpStatus.NOT_FOUND, message);
     }
 
     @ExceptionHandler(Exception.class)
