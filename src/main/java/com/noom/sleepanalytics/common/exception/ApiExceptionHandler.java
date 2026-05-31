@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -49,6 +50,12 @@ public class ApiExceptionHandler {
         String message = exception.getMethod() + " is not supported for this endpoint";
         log.warn("Method not supported: {}", message);
         return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, message);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadableMessage(HttpMessageNotReadableException exception) {
+        log.warn("Malformed request body: {}", exception.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Malformed request body or invalid enum value");
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

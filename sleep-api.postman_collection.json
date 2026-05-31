@@ -27,7 +27,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"userId\": \"user_123\",\n  \"wakeUpDate\": \"2026-05-24\",\n  \"bedtime\": \"22:30:00\",\n  \"wakeTime\": \"08:30:00\",\n  \"isBedtimeBeforeMidnight\": true\n}"
+          "raw": "{\n  \"userId\": \"user_123\",\n  \"wakeUpDate\": \"2026-05-31\",\n  \"bedtime\": \"22:30:00\",\n  \"wakeTime\": \"08:30:00\",\n  \"isBedtimeBeforeMidnight\": true,\n  \"morningFeeling\": \"GOOD\"\n}"
         }
       }
     },

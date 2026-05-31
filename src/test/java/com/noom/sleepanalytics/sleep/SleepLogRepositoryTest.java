@@ -61,6 +61,7 @@ class SleepLogRepositoryTest {
         entity.setBedtime(LocalTime.parse(bedtime));
         entity.setWakeTime(LocalTime.parse(wakeTime));
         entity.setBedtimeBeforeMidnight(isBedtimeBeforeMidnight);
+        entity.setMorningFeeling(MorningFeeling.OK);
         entity.setCreatedAt(Instant.parse("2026-05-30T00:00:00Z"));
         entity.setUpdatedAt(Instant.parse("2026-05-30T00:00:00Z"));
         return entity;

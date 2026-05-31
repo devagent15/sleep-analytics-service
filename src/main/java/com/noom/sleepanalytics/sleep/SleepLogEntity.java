@@ -2,6 +2,8 @@ package com.noom.sleepanalytics.sleep;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -34,6 +36,10 @@ public class SleepLogEntity {
 
     @Column(name = "is_bedtime_before_midnight", nullable = false)
     private boolean isBedtimeBeforeMidnight;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "morning_feeling", nullable = false)
+    private MorningFeeling morningFeeling;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -99,6 +105,14 @@ public class SleepLogEntity {
 
     public void setBedtimeBeforeMidnight(boolean bedtimeBeforeMidnight) {
         isBedtimeBeforeMidnight = bedtimeBeforeMidnight;
+    }
+
+    public MorningFeeling getMorningFeeling() {
+        return morningFeeling;
+    }
+
+    public void setMorningFeeling(MorningFeeling morningFeeling) {
+        this.morningFeeling = morningFeeling;
     }
 
     public Instant getCreatedAt() {

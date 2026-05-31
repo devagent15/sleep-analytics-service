@@ -12,9 +12,11 @@ import com.noom.sleepanalytics.common.exception.NotFoundException;
 import com.noom.sleepanalytics.sleep.dto.CreateSleepLogRequest;
 import com.noom.sleepanalytics.sleep.dto.SleepAnalyticsResponse;
 import com.noom.sleepanalytics.sleep.dto.SleepLogResponse;
+import com.noom.sleepanalytics.sleep.dto.TimeWindowDto;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -39,18 +41,21 @@ class SleepLogControllerTest {
         SleepLogResponse response = new SleepLogResponse(
             1L,
             "user_123",
-            LocalDate.of(2026, 5, 24),
+            LocalDate.of(2026, 5, 30),
             LocalTime.parse("22:30:00"),
             LocalTime.parse("08:30:00"),
             true,
+            MorningFeeling.GOOD,
+            "10:00:00",
             Instant.parse("2026-05-30T13:15:00Z")
         );
         when(sleepLogService.createSleepLog(eq(new CreateSleepLogRequest(
             "user_123",
-            LocalDate.of(2026, 5, 24),
+            LocalDate.of(2026, 5, 30),
             LocalTime.parse("22:30:00"),
             LocalTime.parse("08:30:00"),
-            true
+            true,
+            MorningFeeling.GOOD
         )))).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/sleep-logs")
@@ -58,15 +63,62 @@ class SleepLogControllerTest {
                 .content("""
                     {
                       "userId": "user_123",
-                      "wakeUpDate": "2026-05-24",
+                      "wakeUpDate": "2026-05-30",
                       "bedtime": "22:30:00",
                       "wakeTime": "08:30:00",
-                      "isBedtimeBeforeMidnight": true
+                      "isBedtimeBeforeMidnight": true,
+                      "morningFeeling": "GOOD"
                     }
                     """))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(1))
-            .andExpect(jsonPath("$.userId").value("user_123"));
+            .andExpect(jsonPath("$.userId").value("user_123"))
+            .andExpect(jsonPath("$.morningFeeling").value("GOOD"))
+            .andExpect(jsonPath("$.totalTimeInBed").value("10:00:00"));
+    }
+
+    @Test
+    void shouldRejectInvalidMorningFeeling() throws Exception {
+        mockMvc.perform(post("/api/v1/sleep-logs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "userId": "user_123",
+                      "wakeUpDate": "2026-05-30",
+                      "bedtime": "22:30:00",
+                      "wakeTime": "08:30:00",
+                      "isBedtimeBeforeMidnight": true,
+                      "morningFeeling": "GREAT"
+                    }
+                    """))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldRejectWakeUpDateThatIsNotToday() throws Exception {
+        when(sleepLogService.createSleepLog(eq(new CreateSleepLogRequest(
+            "user_123",
+            LocalDate.of(2026, 5, 29),
+            LocalTime.parse("22:30:00"),
+            LocalTime.parse("08:30:00"),
+            true,
+            MorningFeeling.GOOD
+        )))).thenThrow(new IllegalArgumentException("wakeUpDate must be today's date"));
+
+        mockMvc.perform(post("/api/v1/sleep-logs")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "userId": "user_123",
+                      "wakeUpDate": "2026-05-29",
+                      "bedtime": "22:30:00",
+                      "wakeTime": "08:30:00",
+                      "isBedtimeBeforeMidnight": true,
+                      "morningFeeling": "GOOD"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("wakeUpDate must be today's date"));
     }
 
     @Test
@@ -85,6 +137,8 @@ class SleepLogControllerTest {
             LocalTime.parse("00:00:00"),
             LocalTime.parse("04:30:00"),
             false,
+            MorningFeeling.OK,
+            "04:30:00",
             Instant.parse("2026-05-30T13:15:00Z")
         );
         when(sleepLogService.getLatestSleepLog("user_123")).thenReturn(response);
@@ -92,7 +146,8 @@ class SleepLogControllerTest {
         mockMvc.perform(get("/api/v1/sleep-logs/latest").param("userId", "user_123"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(4))
-            .andExpect(jsonPath("$.wakeUpDate").value("2026-05-27"));
+            .andExpect(jsonPath("$.wakeUpDate").value("2026-05-27"))
+            .andExpect(jsonPath("$.morningFeeling").value("OK"));
     }
 
     @Test
@@ -108,15 +163,19 @@ class SleepLogControllerTest {
         when(sleepLogService.getAnalytics("user_123")).thenReturn(new SleepAnalyticsResponse(
             "user_123",
             4,
+            new TimeWindowDto(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 30)),
             "07:30:00",
             "23:45:00",
-            "07:00:00"
+            "07:00:00",
+            Map.of("BAD", 1L, "OK", 1L, "GOOD", 2L)
         ));
 
         mockMvc.perform(get("/api/v1/sleep-logs/analytics/averages").param("userId", "user_123"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.daysTracked").value(4))
-            .andExpect(jsonPath("$.averageSleepDuration").value("07:30:00"));
+            .andExpect(jsonPath("$.averageSleepDuration").value("07:30:00"))
+            .andExpect(jsonPath("$.range.startDate").value("2026-05-01"))
+            .andExpect(jsonPath("$.morningFeelingFrequencies.GOOD").value(2));
     }
 
     @TestConfiguration

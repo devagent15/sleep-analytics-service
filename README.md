@@ -17,8 +17,11 @@ Each sleep log stores:
 - `bedtime`
 - `wakeTime`
 - `isBedtimeBeforeMidnight`
+- `morningFeeling`
 
 The service is intentionally user-aware without implementing authentication or authorization. Every request is scoped by `userId`.
+
+One intentional product rule from the assignment is enforced in the create endpoint: new sleep logs may only be created for the current date, so the API matches the idea of "last night" rather than allowing arbitrary historical writes through that endpoint.
 
 ## How To Run
 
@@ -61,10 +64,11 @@ curl -X POST http://localhost:8080/api/v1/sleep-logs \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user_123",
-    "wakeUpDate": "2026-05-24",
+    "wakeUpDate": "2026-05-31",
     "bedtime": "22:30:00",
     "wakeTime": "08:30:00",
-    "isBedtimeBeforeMidnight": true
+    "isBedtimeBeforeMidnight": true,
+    "morningFeeling": "GOOD"
   }'
 ```
 
@@ -74,13 +78,19 @@ Expected response:
 {
   "id": 1,
   "userId": "user_123",
-  "wakeUpDate": "2026-05-24",
+  "wakeUpDate": "2026-05-31",
   "bedtime": "22:30:00",
   "wakeTime": "08:30:00",
   "isBedtimeBeforeMidnight": true,
+  "morningFeeling": "GOOD",
+  "totalTimeInBed": "10:00:00",
   "createdAt": "2026-05-31T12:00:00Z"
 }
 ```
+
+Notes:
+- `wakeUpDate` must be today's date
+- valid `morningFeeling` values are `BAD`, `OK`, and `GOOD`
 
 ### 2. Fetch the latest sleep log
 
@@ -91,6 +101,7 @@ curl "http://localhost:8080/api/v1/sleep-logs/latest?userId=user_123"
 Expected behavior:
 - returns the sleep log with the greatest `wakeUpDate` for that user
 - returns `404` if the user has no sleep logs
+- includes both `morningFeeling` and derived `totalTimeInBed`
 
 ### 3. Fetch 30-day analytics
 
@@ -104,9 +115,18 @@ Expected response shape:
 {
   "userId": "user_123",
   "daysTracked": 29,
+  "range": {
+    "startDate": "2026-05-02",
+    "endDate": "2026-05-31"
+  },
   "averageSleepDuration": "06:48:00",
   "averageBedtime": "23:41:00",
-  "averageWakeTime": "06:28:00"
+  "averageWakeTime": "06:28:00",
+  "morningFeelingFrequencies": {
+    "BAD": 4,
+    "OK": 9,
+    "GOOD": 16
+  }
 }
 ```
 
@@ -115,6 +135,32 @@ Expected behavior:
 - if there are no records in that window, the service returns `200 OK` with:
   - `daysTracked = 0`
   - zeroed time values
+  - a valid `range`
+  - zero counts for `BAD`, `OK`, and `GOOD`
+
+## Loading Sample Data
+
+To make manual testing easier, the repository includes a small seed helper that inserts 30 days of randomized sleep logs for a given user.
+
+Seed one user:
+
+```bash
+./scripts/seed_sleep_logs.sh user_123
+```
+
+Seed another user:
+
+```bash
+./scripts/seed_sleep_logs.sh user_567
+```
+
+The seed data varies:
+- bedtime
+- wake time
+- `isBedtimeBeforeMidnight`
+- `morningFeeling`
+
+That makes the analytics response easier to inspect than a flat set of identical rows.
 
 ## Calculation Logic
 
@@ -125,6 +171,13 @@ The problem is that bedtimes cross midnight. For example:
 - but if you average them naively as plain clock values, the result looks wrong
 
 To handle that, the service stores the raw bedtime and wake time along with `isBedtimeBeforeMidnight`.
+
+The assignment also asks for the user’s morning feeling. That value is treated as user-provided input rather than something inferred from sleep duration. The service validates it as one of:
+- `BAD`
+- `OK`
+- `GOOD`
+
+The 30-day analytics response then returns simple frequency counts for those values across the same date window used for the averages.
 
 The analytics calculator uses this rule:
 - if `isBedtimeBeforeMidnight = true`, bedtime is treated as a time on the previous evening
@@ -154,6 +207,7 @@ This keeps the averages mathematically consistent for mixed data such as:
 The schema is created by Flyway in:
 
 - [V1__create_sleep_logs.sql](/Users/shrishauday/PycharmProjects/sleep-analytics-service/src/main/resources/db/migration/V1__create_sleep_logs.sql)
+- [V2__add_morning_feeling.sql](/Users/shrishauday/PycharmProjects/sleep-analytics-service/src/main/resources/db/migration/V2__add_morning_feeling.sql)
 
 The main table is `sleep_logs`.
 
@@ -169,6 +223,48 @@ Then run:
 select *
 from sleep_logs
 order by wake_up_date desc, user_id;
+```
+
+Useful verification queries:
+
+Check how many rows were loaded per user:
+
+```sql
+select user_id, count(*)
+from sleep_logs
+where user_id in ('user_123', 'user_567')
+group by user_id
+order by user_id;
+```
+
+Check the latest records:
+
+```sql
+select id, user_id, wake_up_date, bedtime, wake_time, is_bedtime_before_midnight, morning_feeling
+from sleep_logs
+where user_id = 'user_123'
+order by wake_up_date desc
+limit 5;
+```
+
+Check the analytics window for one user:
+
+```sql
+select count(*), min(wake_up_date), max(wake_up_date)
+from sleep_logs
+where user_id = 'user_123'
+  and wake_up_date between current_date - 29 and current_date;
+```
+
+Check morning feeling frequencies:
+
+```sql
+select morning_feeling, count(*)
+from sleep_logs
+where user_id = 'user_123'
+  and wake_up_date between current_date - 29 and current_date
+group by morning_feeling
+order by morning_feeling;
 ```
 
 ## Testing Notes

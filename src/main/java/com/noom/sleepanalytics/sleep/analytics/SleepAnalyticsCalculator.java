@@ -1,10 +1,14 @@
 package com.noom.sleepanalytics.sleep.analytics;
 
+import com.noom.sleepanalytics.sleep.MorningFeeling;
 import com.noom.sleepanalytics.sleep.SleepLogEntity;
 import com.noom.sleepanalytics.sleep.dto.SleepAnalyticsResponse;
+import com.noom.sleepanalytics.sleep.dto.TimeWindowDto;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,9 +17,17 @@ public class SleepAnalyticsCalculator {
     private static final int MINUTES_PER_DAY = 24 * 60;
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    public SleepAnalyticsResponse calculate(String userId, List<SleepLogEntity> sleepLogs) {
+    public SleepAnalyticsResponse calculate(String userId, TimeWindowDto range, List<SleepLogEntity> sleepLogs) {
         if (sleepLogs.isEmpty()) {
-            return new SleepAnalyticsResponse(userId, 0, "00:00:00", "00:00:00", "00:00:00");
+            return new SleepAnalyticsResponse(
+                userId,
+                0,
+                range,
+                "00:00:00",
+                "00:00:00",
+                "00:00:00",
+                emptyFrequencyMap()
+            );
         }
 
         double averageBedtimeMinutes = sleepLogs.stream()
@@ -33,12 +45,19 @@ public class SleepAnalyticsCalculator {
             .average()
             .orElse(0);
 
+        Map<String, Long> morningFeelingFrequencies = new LinkedHashMap<>();
+        morningFeelingFrequencies.put(MorningFeeling.BAD.name(), countFeeling(sleepLogs, MorningFeeling.BAD));
+        morningFeelingFrequencies.put(MorningFeeling.OK.name(), countFeeling(sleepLogs, MorningFeeling.OK));
+        morningFeelingFrequencies.put(MorningFeeling.GOOD.name(), countFeeling(sleepLogs, MorningFeeling.GOOD));
+
         return new SleepAnalyticsResponse(
             userId,
             sleepLogs.size(),
+            range,
             formatMinutes(averageSleepDurationMinutes),
             formatClockMinutes(averageBedtimeMinutes),
-            formatClockMinutes(averageWakeMinutes)
+            formatClockMinutes(averageWakeMinutes),
+            morningFeelingFrequencies
         );
     }
 
@@ -70,5 +89,17 @@ public class SleepAnalyticsCalculator {
 
     private int toMinutes(LocalTime time) {
         return time.getHour() * 60 + time.getMinute();
+    }
+
+    private long countFeeling(List<SleepLogEntity> sleepLogs, MorningFeeling morningFeeling) {
+        return sleepLogs.stream().filter(log -> log.getMorningFeeling() == morningFeeling).count();
+    }
+
+    private Map<String, Long> emptyFrequencyMap() {
+        Map<String, Long> frequencies = new LinkedHashMap<>();
+        frequencies.put(MorningFeeling.BAD.name(), 0L);
+        frequencies.put(MorningFeeling.OK.name(), 0L);
+        frequencies.put(MorningFeeling.GOOD.name(), 0L);
+        return frequencies;
     }
 }

@@ -1,6 +1,7 @@
 package com.noom.sleepanalytics.sleep.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.noom.sleepanalytics.sleep.MorningFeeling;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,6 +15,8 @@ public record SleepLogResponse(
     @JsonFormat(pattern = "HH:mm:ss")
     LocalTime wakeTime,
     boolean isBedtimeBeforeMidnight,
+    MorningFeeling morningFeeling,
+    String totalTimeInBed,
     Instant createdAt
 ) {
 }

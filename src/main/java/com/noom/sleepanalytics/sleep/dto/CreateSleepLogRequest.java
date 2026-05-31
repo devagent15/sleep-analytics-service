@@ -1,6 +1,7 @@
 package com.noom.sleepanalytics.sleep.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.noom.sleepanalytics.sleep.MorningFeeling;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
@@ -17,6 +18,8 @@ public record CreateSleepLogRequest(
     @NotNull(message = "wakeTime is required")
     @JsonFormat(pattern = "HH:mm:ss")
     LocalTime wakeTime,
-    boolean isBedtimeBeforeMidnight
+    boolean isBedtimeBeforeMidnight,
+    @NotNull(message = "morningFeeling is required")
+    MorningFeeling morningFeeling
 ) {
 }
