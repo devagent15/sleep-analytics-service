@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: sleep_analytics
+      POSTGRES_USER: sleep
+      POSTGRES_PASSWORD: sleep
+    ports:
+      - "5432:5432"
+  api:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/sleep_analytics
+      DB_USERNAME: sleep
+      DB_PASSWORD: sleep
+    ports:
+      - "8080:8080"
